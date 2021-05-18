@@ -56,7 +56,7 @@ and the output of the {\em linear neuron} is
 \includegraphics[width=0.3\linewidth]{figures/idealized-neuron.pdf}
 }
 \caption{An idealized neuron with $x_i$ representing its inputs and $y$ an output variable.}
-\label{fig:neural-cell}
+\label{fig:idealized-neuron}
 \end{figure}
 
 Other types of neurons incorporate other {\em activation functions}, that is, functions that take a weighted sum of the inputs to compute the output of a neuron. Popular examples include {\em binary threshold neuron},
@@ -143,7 +143,7 @@ Let us, for simplicity, assume we are dealing with only one example in the train
 \begin{equation}
 J(w_1, b_1, \ldots, w_3, b_3)=(a_3-y)^2
 \end{equation}
-Until now, we have used the indices to denote the weights $w$, the offsets $b$ and activation at each layer. Later, when dealing with more than one neuron at each layer, a notation which denotes the layer number will come handy. Apart from the layer with the input value, our simple network from Fig.~\ref{simple-network} has three layers, $L=3$. The activation $a_3$ belongs to the third layer and we will alternatively denote it with $a^{(L)}$. Similarly, $a^{(L-1)}$ will denote $a_2$. Same goes with other parameters and activation values. We can thus write that the weighted sum of inputs for neuron at layer $L$ is equal to
+Until now, we have used the indices to denote the weights $w$, the offsets $b$ and activation at each layer. Later, when dealing with more than one neuron at each layer, a notation which denotes the layer number will come handy. Apart from the layer with the input value, our simple network from Fig.~\ref{fig:simple-network} has three layers, $L=3$. The activation $a_3$ belongs to the third layer and we will alternatively denote it with $a^{(L)}$. Similarly, $a^{(L-1)}$ will denote $a_2$. Same goes with other parameters and activation values. We can thus write that the weighted sum of inputs for neuron at layer $L$ is equal to
 \begin{equation}
 z^{(L)}=w^{(L)} a^{(L-1)}+b^{(L)},
 \end{equation}
@@ -182,15 +182,15 @@ Notice that the only change when computing partial derivative of $J$ according t
 \centering{
 \includegraphics[width=0.3\linewidth]{figures/network-fragment.pdf}
 }
-\caption{A fragment of a neural network exposing the relation between activation of the $k$-th neuron in layer $(L-1)$ and activation of a $j$-th neuron at leyer $L$.}
+\caption{A fragment of a neural network exposing the relation between activation of the $k$-th neuron in layer $(L-1)$ and activation of a $j$-th neuron at layer $L$.}
 \label{fig:network-fragment}
 \end{figure}
 
-Let us consider now a more general type of network, with a number of neurons at each layer, and the number of neurons at the output layer. We again restrict the training set to only one data instance. Consider a fragment of a network from Fig.~\ref{fig:network-fragment}, which depicts the relation between activation of the $k$-th neuron in layer $(L-1)$ and $j$-th neuron at leyer $L$. Notice that
+Let us consider now a more general type of network, with a number of neurons at each layer, and the number of neurons at the output layer. We again restrict the training set to only one data instance. Consider a fragment of a network from Fig.~\ref{fig:network-fragment}, which depicts the relation between activation of the $k$-th neuron in layer $(L-1)$ and $j$-th neuron at layer $L$. Notice that
 \begin{align}
 z_j^{(L)} & = \sum_i w_{ji}^{(L)} a_i^{(L-1)} + b_j^{(L)}, \\
 a_j^{(L)} & = \sigma(z_j^{(L)}), \\
-J & = \sum_j^(n_{L-1}(a_j^{(L)}-y_j)^2.
+J & = \sum_j^{n_{L-1}}(a_j^{(L)}-y_j)^2.
 \end{align}
 We assume the indices run from 0, replace the intercepts $b$ for each $k$-th neuron with $w_{0k}$, and denote the number of neurons at layer $L$ with $n_L$. Notice also that the weights have now two indices. The weight $w_{jk}$ is a weight for a $j$-the neuron for the output of the $k$-th neuron from the previous layer. For a gradient descent, we again need to compute the change this weight invokes to the cost function,
 \begin{equation}
