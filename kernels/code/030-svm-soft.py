@@ -73,6 +73,7 @@ plt.xlim(-4, 4)
 plt.ylim(-4, 4)
 plt.xlabel('x1')
 plt.ylabel('x2')
+plt.show()
 plt.savefig('svm-soft.svg')
 plt.close()
 

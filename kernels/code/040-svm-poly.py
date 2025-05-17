@@ -18,10 +18,10 @@ plt.savefig('svm-moons-data.svg')
 plt.close()
 
 # Polynomial kernel function
-def polynomial_kernel(X1, X2=None, degree=3, coef0=1):
+def polynomial_kernel(X1, X2=None, degree=3, c=1):
     if X2 is None:
         X2 = X1
-    return (np.dot(X1, X2.T) + coef0) ** degree
+    return (np.dot(X1, X2.T) + c) ** degree
 
 # Compute the kernel matrix
 K = polynomial_kernel(X)
@@ -62,7 +62,7 @@ b = compute_bias()
 # Function to compute decision value for a point
 def decision_function(x_test):
     x_test = np.atleast_2d(x_test)
-    K_test = polynomial_kernel(x_test, X, degree=3, coef0=1)
+    K_test = polynomial_kernel(x_test, X, degree=3, c=1)
     return np.sum(alphas * y * K_test, axis=1) + b
 
 # Plotting
@@ -93,6 +93,7 @@ plt.xlabel('x1', labelpad=10)
 plt.ylabel('x2', labelpad=10)
 plt.legend()
 plt.tight_layout()
+plt.show()
 plt.savefig('svm-poly.svg')
 plt.close()
 
