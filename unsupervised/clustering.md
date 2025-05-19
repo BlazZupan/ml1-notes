@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Clustering
 
 Clustering of data is a method of unsupervised learning that enables the discovery of hidden patterns in data without predefined labels or classes. It organizes data into clusters, where instances within a group are as similar as possible, while different clusters are as distinct as possible. This allows for a better understanding of the data structure, its organization, and dimensionality reduction, which facilitates further analysis.
@@ -294,3 +295,6 @@ Clustering data enables the discovery of hidden patterns, but without proper int
 **Rules and Decision Trees for Cluster Explanation.** To facilitate the explanation of clusters, one can construct decision trees or rules based on features that best distinguish between clusters. This approach generates simple rules such as *"If age > 50 and blood pressure > 140, then the probability of belonging to cluster X is 85%"*. Such rules help in understanding complex results and make them applicable in real-world scenarios.
 
 Interpreting clustering results is essential for meaningful application, as without it, the resulting groups remain mathematical entities with no clear significance. By employing various methods for visualization, feature analysis, semantic interpretation, and rule generation, we can gain deeper insights into the data structure and enhance the utility of clustering models across diverse applications.
+=======
+# Unsupervised
+>>>>>>> 1787e5d67bf2d4d608ae23c205b8b57bfb722dfc
