@@ -1,4 +1,4 @@
-# Kernel Methods – Foundations
+# Kernel Methods
 
 Many machine learning models, such as linear classifiers, regressors, even data projections and clustering, work well when the data can be modelled with a straight line or a hyperplane. However, real-world data is often non-linear and not linearly separable. A common strategy to address this is to map the data into a higher-dimensional space where a linear separator may exist. Explicitly computing this transformation can be expensive or infeasible, especially in very high-dimensional spaces, and it may require a lot of memory, particularly when the original data set already contains many features.
 
@@ -83,23 +83,41 @@ The idea is to minimize \( L \) with respect to the primal variables \( w \) and
 \frac{\partial L}{\partial b} = -\sum_i \alpha_i y_i = 0
 \]
 
-Substituting these expressions back into the Lagrangian eliminates \( w \) and \( b \), resulting in the dual problem:
+Substituting \( w = \sum_i \alpha_i y_i x_i \) and using \( \sum_i \alpha_i y_i = 0 \) (so \( \sum_i \alpha_i y_i b = b \sum_i \alpha_i y_i = 0 \)), we obtain
 
 \[
-L(\alpha) = \sum_i \alpha_i - \frac{1}{2} \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j
+\frac{1}{2} \|w\|^2 = \frac{1}{2} \left( \sum_i \alpha_i y_i x_i \right)^\top \left( \sum_j \alpha_j y_j x_j \right) = \frac{1}{2} \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j.
 \]
 
-Thus, the dual optimization problem becomes:
+and
 
+\[ -\sum_i \alpha_i [y_i (w^\top x_i + b) - 1] = - \sum_i \alpha_i (y_i w^\top x_i + y_i b - 1) = - \sum_i \alpha_i (y_i w^\top x_i - 1)
+\]
+because \( y_i b \) sums to 0. Expanding:
 \[
-\max_{\alpha} \sum_i \alpha_i - \frac{1}{2} \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j
+= - \sum_i \alpha_i y_i w^\top x_i + \sum_i \alpha_i.
 \]
+
+But \( w = \sum_j \alpha_j y_j x_j \), so:
+\[
+w^\top x_i = \left( \sum_j \alpha_j y_j x_j \right)^\top x_i = \sum_j \alpha_j y_j x_j^\top x_i,
+\]
+thus:
+\[
+\sum_i \alpha_i y_i w^\top x_i = \sum_i \alpha_i y_i \sum_j \alpha_j y_j x_j^\top x_i = \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j.
+\]
+
+Putting it together, the first term is \( \frac{1}{2} \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j \), and the second term is \( - \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j + \sum_i \alpha_i \). Thus, the dual becomes:
+\[
+\max_{\alpha}L(\alpha) = \sum_i \alpha_i - \frac{1}{2} \sum_{i,j} \alpha_i \alpha_j y_i y_j x_i^\top x_j
+\]
+
 subject to:
 \[
 \alpha_i \geq 0, \quad \sum_i \alpha_i y_i = 0
 \]
 
-In the dual problem, the optimization depends only on the dot products \( x_i^\top x_j \) between pairs of training examples. To simplify both the notation and the computation, we introduce the **Gram matrix** \( K \), defined by \( K_{ij} = x_i^\top x_j \). The Gram matrix collects all pairwise dot products between training points into a single matrix. It is called a "Gram matrix" because, in linear algebra, such a matrix arises when computing all inner products between a set of vectors, and its properties reflect the geometric relationships—such as angles and lengths—between those vectors. In particular, the Gram matrix is always symmetric and positive semi-definite, properties that are crucial for the convexity and solvability of the dual optimization problem.
+In the dual problem, the optimization depends only on the dot products \( x_i^\top x_j \) between pairs of training examples. To simplify both the notation and the computation, we introduce the **Gram matrix** \( K \), defined by \( K_{ij} = x_i^\top x_j \). The Gram matrix collects all pairwise dot products between training points into a single matrix. It is called a "Gram matrix" because, in linear algebra, such a matrix arises when computing all inner products between a set of vectors, and its properties reflect the geometric relationships—such as angles and lengths—between those vectors. In particular, **the Gram matrix is always symmetric and positive semi-definite**, properties that are crucial for the convexity and solvability of the dual optimization problem.
 
 The dual form is crucial because it reveals important properties of the solution and simplifies further developments. In the dual, the data points appear only through dot products \( x_i^\top x_j \), which will later allow us to introduce kernels and extend SVMs to non-linear decision boundaries. 
 
@@ -111,143 +129,38 @@ Once we solve for the optimal multipliers \( \alpha_i \), we can reconstruct the
 w = \sum_i \alpha_i y_i x_i
 \]
 
+The bias term \( b \) can be computed using any support vector. For a support vector \( (x_s, y_s) \), we have
+
+\[
+y_s (w^\top x_s + b) = 1,
+\]
+
+which rearranges to
+
+\[
+b = y_s - \sum_i \alpha_i y_i x_i^\top x_s.
+\]
+
+In practice, it is common to compute \( b \) for each support vector and take the average:
+
+\[
+b = \frac{1}{|\mathcal{S}|} \sum_{s \in \mathcal{S}} \left( y_s - \sum_i \alpha_i y_i x_i^\top x_s \right),
+\]
+
+where \( \mathcal{S} \) denotes the set of support vectors.
+
+
 The decision function for classifying new points is:
 
 \[
 f(x) = \sum_i \alpha_i y_i x_i^\top x + b
 \]
 
-The bias term \( b \) can be computed using any support vector. This compact representation shows that only the support vectors are needed for predictions, making the model efficient in both computation and memory.
-
-## Diversion: Quadratic Programming and an Example with `cvxopt`
-
-When solving the dual form of the SVM, we face a specific type of optimization problem known as a quadratic program. Quadratic programming involves minimizing (or maximizing) a quadratic objective function subject to linear constraints. To understand how this works in practice, we first introduce a simple real-world example that shows how quadratic programming problems arise and how they can be solved using Python.
-
-Imagine you are investing money between two assets: stocks and bonds. You want to allocate your investment in a way that minimizes the overall risk. In finance, the risk of an investment is often quantified using the variance or covariance of returns. The idea is that if two assets tend to move together, the overall portfolio is riskier. If they move independently or in opposite directions, the risk is reduced. Mathematically, the total risk of the investment can be expressed as a quadratic function of the investment proportions.
-
-Let \( x = (x_1, x_2) \) represent the fractions of your money invested in stocks and bonds, respectively. The risk is given by the expression:
-
-\[
-\text{Risk} = \frac{1}{2} x^\top P x
-\]
-
-where \( P \) is the covariance matrix of returns. Each entry of \( P \) has a specific meaning: \( P_{11} \) measures how much stock returns fluctuate on their own (the variance of stocks), \( P_{22} \) measures the variance of bond returns, and \( P_{12} = P_{21} \) measures the covariance between stock and bond returns. A positive covariance means that stocks and bonds tend to move together, while a negative covariance would indicate that they move in opposite directions.
-
-For simplicity, we assume that the covariance matrix is:
-
-\[
-P = \begin{bmatrix} 0.1 & 0.05 \\ 0.05 & 0.2 \end{bmatrix}
-\]
-
-In this setup, stocks have a variance of 0.1, bonds have a higher variance of 0.2, and their returns are positively correlated with a covariance of 0.05. Your goal is to minimize the risk while investing all of your available money and ensuring that no negative investments are made (no short selling).
-
-The optimization problem can be formally stated as:
-
-\[
-\min_{x} \quad \frac{1}{2} x^\top P x
-\]
-subject to:
-
-\[
-x_1 + x_2 = 1, \quad x_1 \geq 0, \quad x_2 \geq 0
-\]
-
-This says that the sum of investments must be exactly one (you invest all your money), and each investment must be non-negative.
-
-We can solve this quadratic program using Python and the `cvxopt` library. The `cvxopt` package is designed for convex optimization and can efficiently solve quadratic problems. The following code demonstrates how to set up and solve the problem:
-
-```python
-import numpy as np
-from cvxopt import matrix, solvers
-
-# Covariance matrix
-P = matrix([[0.1, 0.05],
-            [0.05, 0.2]])
-
-# No linear term in the objective
-q = matrix([0.0, 0.0])
-
-# Constraints: Gx <= h for x1 >= 0, x2 >= 0
-G = matrix([[-1.0, 0.0],
-             [0.0, -1.0]])
-h = matrix([0.0, 0.0])
-
-# Constraint: Ax = b for x1 + x2 = 1
-A = matrix([[1.0], [1.0]])   # Note: A must have size (2, 1)
-b = matrix([1.0])
-
-# Solve the quadratic program
-solution = solvers.qp(P, q, G, h, A, b)
-
-# Extract and display solution
-x = np.array(solution['x']).flatten()
-print("Optimal portfolio allocation:", x)
-```
-
-In the quadratic program we want to solve, each matrix and vector has a specific role that corresponds to part of the mathematical formulation.
-
-The matrix \( P \) represents the quadratic part of the objective function. The objective we are minimizing is
-
-\[
-\frac{1}{2} x^\top P x + q^\top x,
-\]
-
-where in our case \( q = 0 \), so the objective reduces to minimizing only the quadratic term. In our example, \( P \) is the covariance matrix of asset returns, encoding how much each asset fluctuates on its own (the variances) and how much the two assets fluctuate together (the covariance). The diagonal elements \( P_{11} \) and \( P_{22} \) represent the variance of stocks and bonds, respectively, while the off-diagonal elements \( P_{12} = P_{21} \) represent the covariance between stocks and bonds.
-
-The vector \( q \) represents the linear part of the objective function. Since there is no linear component in the risk function, \( q \) is simply the zero vector.
-
-The matrix \( G \) and the vector \( h \) encode the inequality constraints. Inequality constraints are written as
-
-\[
-Gx \leq h,
-\]
-
-and in this case, they enforce that the investment fractions \( x_1 \) and \( x_2 \) must be non-negative:
-
-\[
-x_1 \geq 0, \quad x_2 \geq 0.
-\]
-
-These conditions ensure that no negative investments (no short selling) are allowed.
-
-The matrix \( A \) and the vector \( b \) encode the equality constraints. Equality constraints are written as
-
-\[
-Ax = b,
-\]
-
-and here they enforce that the entire available amount is invested, meaning:
-
-\[
-x_1 + x_2 = 1.
-\]
-
-This guarantees that the full investment is allocated between stocks and bonds without any leftover.
-
-When setting up a quadratic program, arranging the problem into the standard form with matrices \( P \), \( q \), \( G \), \( h \), \( A \), and \( b \) is crucial, as solvers like cvxopt expect the input in exactly this structure. This same decomposition will be used in the next section to solve the dual form of the support vector machine.
-
-When we run this code, the solver finds the optimal fractions of money to invest in stocks and bonds to achieve the minimum risk according to the given covariance matrix. 
-
-```python
-     pcost       dcost       gap    pres   dres
- 0:  4.8915e-02 -9.7278e-01  1e+00  6e-17  2e+00
- 1:  4.8045e-02  1.9093e-02  3e-02  1e-16  6e-02
- 2:  4.3933e-02  4.1156e-02  3e-03  2e-16  4e-18
- 3:  4.3750e-02  4.3676e-02  7e-05  1e-16  1e-17
- 4:  4.3750e-02  4.3749e-02  7e-07  1e-16  4e-18
- 5:  4.3750e-02  4.3750e-02  7e-09  1e-16  5e-18
-Optimal solution found.
-Optimal portfolio allocation: [0.74999986 0.25000014]
-```
-
-When we run the solver, it outputs information about the optimization process, showing how the primal cost and dual cost converge toward each other, with the gap between them shrinking at each iteration. These diagnostics indicate that the optimization is proceeding correctly. At the end, the solver reports that the optimal solution has been found. The final result shows that approximately 75% of the money should be invested in stocks and 25% in bonds to minimize the overall portfolio risk according to the given covariance matrix.
-
-In convex optimization, the primal cost refers to the value of the original optimization objective, while the dual cost refers to the value of the dual optimization problem, which is mathematically derived from the primal by introducing Lagrange multipliers. For convex problems, strong duality usually holds, meaning that at the optimal solution, the primal and dual costs should be equal. During the optimization process, the solver monitors both the primal and dual costs, and the difference between them, called the duality gap, measures how close the current solution is to optimality. When the primal and dual costs converge and the duality gap becomes very small, the solver concludes that it has found an optimal solution.
+and the class for the data instance \( x \) is \( \operatorname{sign}(f(x)) \). This compact representation shows that only the support vectors are needed for predictions (!), making the model efficient in both computation and memory. In other words, essentially, we do not need to compute \( w \) and bias (although, as shown above, we can).
 
 ## Linear SVM and Quadratic Programming: An Example in Python
 
-We have seen that solving the dual form of a support vector machine leads naturally to a quadratic programming problem.  
-Let us now recall the objective and show how it can be solved in practice.
+We have seen that solving the dual form of a support vector machine leads naturally to a quadratic programming problem. Let us now recall the objective and show how it can be solved in practice.
 
 The dual form of the hard-margin SVM optimization problem is:
 
@@ -320,7 +233,7 @@ solution = solvers.qp(P, q, G, h, A, b)
 alphas = np.array(solution['x']).flatten()
 ```
 
-Now, primarily for plotting of our model, we can now find the weight vector \( w \) and bias \( b \), primarily for plotting of the model.
+Now, primarily for plotting of our model, we can now find the weight vector \( w \) and bias \( b \).
 
 ```python
 # Reconstruct w
@@ -411,7 +324,7 @@ Thus, each \( \alpha_i \) must satisfy both \( \alpha_i \geq 0 \) and \( \alpha_
 0 \leq \alpha_i \leq C
 \]
 
-This is how the constraint in the dual form changes from the hard-margin to the soft-margin SVM. The upper bound \( C \) appears because we explicitly allow controlled margin violations in the primal.
+This is how the constraint in the dual form changes from the hard-margin to the soft-margin SVM. The upper bound \( C \) appears because we explicitly allow controlled margin violations in the primal. In the soft-margin case, the upper bound \( C \) controls how much violation of the margin is tolerated. If \( \alpha_i = 0 \), the corresponding point lies outside the margin and is correctly classified. If \( 0 < \alpha_i < C \), the point lies exactly on the margin boundary and is a support vector. If \( \alpha_i = C \), the point is either inside the margin or misclassified. Therefore, the condition \( 0 \leq \alpha_i \leq C \) reflects the balance between fitting the data and allowing margin violations when necessary.
 
 Therefore, to modify the code for the soft-margin SVM, we only need to change the matrix \( G \) and the vector \( h \) to reflect both lower and upper bounds:
 
@@ -521,11 +434,33 @@ It corresponds to the standard dot product in the original space and leads to a 
 
 The **polynomial kernel** is given by
 
-\[
+$$
 K(x, x') = (x^\top x' + c)^d,
-\]
+$$
 
-where \( c \) and \( d \) are parameters. It allows the model to capture interactions between features up to a specified degree. Lower-degree polynomials capture simple interactions, while higher degrees allow more complex decision boundaries, at the cost of higher risk of overfitting. Typical values of the parameters are \( d = 2 \) or \( d = 3 \), corresponding to quadratic or cubic decision boundaries that capture moderate nonlinearity without overfitting. The constant \( c \) is usually set to \( 0 \) or \( 1 \), with \( c = 1 \) being a common default to ensure that the kernel output remains positive even when the dot product between inputs is small or negative. Higher degrees or larger \( c \) values are rarely used, as they tend to increase model complexity and the risk of overfitting, especially with limited data.
+where $c$ and $d$ are parameters. It allows the model to capture interactions between features up to a specified degree. Lower-degree polynomials capture simple interactions, while higher degrees allow more complex decision boundaries, at the cost of higher risk of overfitting. Typical values of the parameters are $d = 2$ or $d = 3$, corresponding to quadratic or cubic decision boundaries that capture moderate nonlinearity without overfitting. The constant $c$ is usually set to $0$ or $1$, with $c = 1$ being a common default to ensure that the kernel output remains positive even when the dot product between inputs is small or negative. Higher degrees or larger $c$ values are rarely used, as they tend to increase model complexity and the risk of overfitting, especially with limited data.
+
+To better understand what this kernel does, it's useful to look at the *explicit feature mapping* that corresponds to the kernel. Although the main appeal of the kernel trick is that we avoid working directly in the high-dimensional feature space, exploring this space can help build intuition about how the kernel transforms the data. Consider the case where inputs are two-dimensional vectors, $x = (x_1, x_2)$, and we use a degree-2 polynomial kernel with $c = 1$:
+
+$$
+K(x, z) = (x^\top z + 1)^2.
+$$
+
+Expanding this expression gives:
+
+$$
+(x_1 z_1 + x_2 z_2 + 1)^2 = x_1^2 z_1^2 + 2x_1 x_2 z_1 z_2 + x_2^2 z_2^2 + 2x_1 z_1 + 2x_2 z_2 + 1.
+$$
+
+This corresponds exactly to the dot product in a six-dimensional space with the following feature map:
+
+$$
+\phi(x_1, x_2) = \left( x_1^2, \sqrt{2} x_1 x_2, x_2^2, \sqrt{2} x_1, \sqrt{2} x_2, 1 \right).
+$$
+
+The $\sqrt{2}$ coefficients are included to ensure that inner products between transformed vectors match the kernel expansion exactly, preserving distances and angles. The feature map contains all monomials of degree up to 2, including cross-terms and linear terms, which explains how the polynomial kernel captures feature interactions. While this mapping is tractable for small inputs and low-degree kernels, it becomes infeasible to compute explicitly in higher dimensions—hence the power of the kernel trick, which allows us to work with such feature spaces implicitly.
+
+
 
 The **radial basis function (RBF) kernel**, also called the Gaussian kernel, is given by
 
@@ -613,3 +548,280 @@ Fortunately, there are simple rules for constructing new kernels. If \( K_1 \) a
 - compositions such as \( f(K_1(x,x')) \) where \( f \) is a function preserving PSD.
 
 These rules make it easy to build complex kernels by combining simpler ones, providing great flexibility while preserving the mathematical guarantees that kernel methods rely on.
+
+## Kernel Ridge Regression
+
+In the previous chapter, we have seen how kernels allow us to replace dot products with more flexible measures of similarity, enabling linear algorithms to operate in rich, often infinite-dimensional feature spaces. In this section, we extend another classic linear model—ridge regression—into the kernelized setting. Ridge regression is one of the simplest and most widely used techniques for fitting a function to data while controlling overfitting through regularization. Kernel ridge regression combines the strengths of ridge regression with the flexibility of kernels, resulting in a powerful tool that can model highly nonlinear patterns while remaining mathematically elegant and computationally tractable.
+
+Let us first briefly recall the idea of standard ridge regression. Suppose we are given training data \( (x_i, y_i) \) for \( i = 1, \dots, n \), where \( x_i \in \mathbb{R}^d \) and \( y_i \in \mathbb{R} \). In linear regression, we seek a weight vector \( w \in \mathbb{R}^d \) such that the predicted value \( \hat{y}_i = w^\top x_i \) is as close as possible to the true target \( y_i \). The simplest approach minimizes the sum of squared errors:
+
+\[
+\min_w \sum_{i=1}^n (y_i - w^\top x_i)^2.
+\]
+
+However, when the number of features is large compared to the number of data points, or when the features are highly correlated, this least squares problem can lead to overfitting or unstable solutions. Ridge regression addresses this by adding a penalty on the size of the weight vector, leading to the optimization problem:
+
+\[
+\min_w \sum_{i=1}^n (y_i - w^\top x_i)^2 + \lambda \|w\|^2,
+\]
+
+where \( \lambda > 0 \) is a regularization parameter that controls the trade-off between fitting the data and keeping \( w \) small. The closed-form solution for \( w \) is well known and given by:
+
+\[
+w = (X^\top X + \lambda I)^{-1} X^\top y,
+\]
+
+where \( X \) is the \( n \times d \) matrix whose rows are the \( x_i^\top \), and \( y \) is the vector of targets.
+
+While ridge regression is effective when the relationship between \( x \) and \( y \) is close to linear, it struggles with complex, nonlinear patterns. To address this, we could try to manually design nonlinear features, but a far more systematic approach is to use kernels. Instead of fitting a linear model in the original input space, we will fit a linear model in a high-dimensional feature space where the inputs have been transformed via a (possibly implicit) mapping \( \phi(x) \).
+
+In the kernelized setting, we no longer seek a weight vector \( w \) directly. Instead, by the Representer Theorem, we know that the solution can be expressed as a linear combination of the training examples mapped into feature space:
+
+\[
+w = \sum_{i=1}^n \alpha_i \phi(x_i),
+\]
+
+where \( \alpha_i \) are coefficients to be determined. Thus, the predicted output for a new point \( x \) becomes:
+
+\[
+f(x) = w^\top \phi(x) = \sum_{i=1}^n \alpha_i \langle \phi(x_i), \phi(x) \rangle = \sum_{i=1}^n \alpha_i K(x_i, x),
+\]
+
+where \( K(x_i, x) \) is the kernel function that computes the inner product between \( \phi(x_i) \) and \( \phi(x) \). Thus, even though the feature space might be infinite-dimensional, the solution depends only on the finite set of training points, and all computations can be carried out via the kernel function without explicitly constructing the feature mapping.
+
+Our goal is now to determine the coefficients \( \alpha = (\alpha_1, \dots, \alpha_n)^\top \). To find them, we substitute this form into the ridge regression objective. The empirical error term becomes:
+
+\[
+\sum_{i=1}^n (y_i - f(x_i))^2 = \sum_{i=1}^n \left(y_i - \sum_{j=1}^n \alpha_j K(x_j, x_i)\right)^2.
+\]
+
+The regularization term, originally \( \|w\|^2 \), now becomes:
+
+\[
+\|w\|^2 = \left\|\sum_{i=1}^n \alpha_i \phi(x_i)\right\|^2 = \sum_{i,j} \alpha_i \alpha_j \langle \phi(x_i), \phi(x_j) \rangle = \sum_{i,j} \alpha_i \alpha_j K(x_i, x_j).
+\]
+
+Thus, the kernel ridge regression objective is:
+
+\[
+\min_\alpha \sum_{i=1}^n \left(y_i - \sum_{j=1}^n \alpha_j K(x_j, x_i)\right)^2 + \lambda \sum_{i,j} \alpha_i \alpha_j K(x_i, x_j).
+\]
+
+This expression can be written more compactly in matrix notation. Let \( K \) denote the \( n \times n \) Gram matrix with entries \( K_{ij} = K(x_i, x_j) \). Let \( y \) and \( \alpha \) be the column vectors of the targets and coefficients, respectively. Then, the objective becomes:
+
+\[
+\min_\alpha (y - K \alpha)^\top (y - K \alpha) + \lambda \alpha^\top K \alpha.
+\]
+
+Expanding the terms, we have:
+
+\[
+(y - K\alpha)^\top (y - K\alpha) = y^\top y - 2\alpha^\top K y + \alpha^\top K^\top K \alpha,
+\]
+
+and thus the full objective is:
+
+\[
+y^\top y - 2\alpha^\top K y + \alpha^\top (K^2 + \lambda K) \alpha.
+\]
+
+To minimize with respect to \( \alpha \), we take the derivative and set it to zero:
+
+\[
+-2Ky + 2(K^2 + \lambda K)\alpha = 0,
+\]
+
+which simplifies to:
+
+\[
+(K^2 + \lambda K)\alpha = Ky.
+\]
+
+Multiplying both sides by \( K^{-1} \) (assuming \( K \) is invertible or adding a small regularization if necessary), we obtain:
+
+\[
+(K + \lambda I)\alpha = y,
+\]
+
+and thus the closed-form solution:
+
+\[
+\alpha = (K + \lambda I)^{-1} y.
+\]
+
+This remarkably simple formula shows that, once we have the Gram matrix \( K \), solving for \( \alpha \) requires only solving a linear system, exactly as in standard ridge regression but operating in the space of kernels. Once \( \alpha \) is found, predictions on a new point \( x \) are made by evaluating:
+
+\[
+f(x) = \sum_{i=1}^n \alpha_i K(x_i, x).
+\]
+
+Kernel ridge regression thus provides a flexible and efficient way to fit nonlinear functions. It retains the computational simplicity of linear models—closed-form solution, no iterative optimization needed—while being capable of modeling highly complex relationships thanks to the choice of the kernel.
+
+To illustrate the utility of kernel ridge regression, consider the following data set:
+
+```python
+np.random.seed(0)
+X = np.linspace(-3, 3, 30)[:, None]
+y = np.sin(X).ravel() + 0.1 * np.random.randn(30)
+```
+
+Obviously, the relation between input feature and a class is non-linear. We will use a Gaussian (RBF) kernel that we have already defined in the previous chapter, compute the Gram matrix, and solve for `alpha`:
+
+```python
+K = rbf_kernel(X, X, gamma=1.0)
+lmbda = 0.1  # regularization strength
+n = K.shape[0]
+alpha = np.linalg.solve(K + lmbda * np.eye(n), y)
+```
+
+To plot a result we can create linearly-spaced input points and compute predictions:
+
+```python
+X_test = np.linspace(-4, 4, 200)[:, None]
+K_test = rbf_kernel(X_test, X)
+y_pred = np.dot(K_test, alpha)
+```
+
+![](kernel-rr-rbf.svg)
+**Figure:** Data modelling with kernel ridge regression, where we have used a RBF kernel.
+
+Changing a kernel to polynomial, third-degree kernel, yields a smoother solution:
+
+```python
+def polynomial_kernel(X1, X2, degree=3, coef0=1):
+    # Polynomial kernel
+    return (np.dot(X1, X2.T) + coef0) ** degree
+```
+
+![](kernel-rr-poly.svg)
+**Figure:** Data modelling with kernel ridge regression, where we have used a 3-rd degree polynomial kernel.
+
+## Kernel Logistic Regression
+
+We can also kernalize logistic regression. Kernalizing this model may have benefits compared to SVM, as logistic regression nicely models class probabilities and does not focus only on crisp classification. Standard logistic regression models class probability as:
+
+\[
+P(y = 1 \mid \mathbf{x}) = \sigma(\mathbf{w}^\top \mathbf{x} + b)
+\]
+
+where \(\mathbf{w}\) is a weight vector and \(\mathbf{x}\) is the input. Instead of expressing \(\mathbf{w}\) directly, we express it as a linear combination of training instances:
+
+\[
+\mathbf{w} = \sum_{i=1}^n \alpha_i \mathbf{x}_i
+\]
+
+where \(\alpha_i\) are coefficients, and \(\mathbf{x}_i\) are the training examples.
+
+Substituting into the original logistic regression formula:
+
+\[
+\mathbf{w}^\top \mathbf{x} = \left( \sum_{i=1}^n \alpha_i \mathbf{x}_i \right)^\top \mathbf{x} = \sum_{i=1}^n \alpha_i \mathbf{x}_i^\top \mathbf{x}
+\]
+
+Thus, the model becomes:
+
+\[
+P(y = 1 \mid \mathbf{x}) = \sigma\left(\sum_{i=1}^n \alpha_i \mathbf{x}_i^\top \mathbf{x} + b\right)
+\]
+
+Finally, to **kernelize**, we replace each inner product \(\mathbf{x}_i^\top \mathbf{x}\) with a **kernel function** \(K(\mathbf{x}_i, \mathbf{x})\), giving:
+
+\[
+P(y = 1 \mid \mathbf{x}) = \sigma\left(\sum_{i=1}^n \alpha_i K(\mathbf{x}_i, \mathbf{x}) + b\right)
+\]
+
+Here is the code for kernalized logistic regression. We first define the data, introduce a kernel (we opted for a Gaussian kernel) and compute the Gram matrix:
+
+```python
+X, y = make_moons(n_samples=200, noise=0.3, random_state=42)
+
+def rbf_kernel(X1, X2, gamma=0.5):
+    dists = np.sum(X1**2, axis=1)[:, None] + np.sum(X2**2, axis=1)[None, :] - 2 * X1 @ X2.T
+    return np.exp(-gamma * dists)
+
+gamma = 0.5
+K = rbf_kernel(X, X, gamma)
+```
+
+Next, we define the loss function for the logistic regression. The loss is based on the standard log likelihood for logistic regression, that is, a cross-entropy loss:
+
+```python
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def logistic_loss(alpha):
+    pred = sigmoid(K @ alpha)
+    return -np.mean(y * np.log(pred + 1e-15) + (1 - y) * np.log(1 - pred + 1e-15))
+```
+
+Optimization step is next:
+
+```python
+result = minimize(logistic_loss, np.zeros(X.shape[0]), method='L-BFGS-B')
+alpha = result.x
+```
+
+The result is depicted in the following graph. 
+
+![](kernel-logreg.png)
+**Figure:** Kernelized logistic regression, showing the decision boundary and probability contours for the target class (in red).
+
+## Kernel approximation techniques
+
+Kernel methods enable learning complex relationships without explicit feature transformations, but they often suffer from high computational costs. Computing and storing the full \(n \times n\) kernel matrix becomes expensive for large datasets. To address this, several kernel approximation techniques have been developed that make kernel methods scalable. Two widely used techniques are the Nyström method and Random Fourier Features.
+
+The Nyström method approximates the full kernel matrix by sampling a small subset of the data points. Suppose we select \(m\) representative points (with \(m \ll n\)). We compute two smaller matrices: \(K_{mm}\), the kernel matrix between the sampled points, and \(K_{nm}\), the kernel matrix between all data points and the sampled points. Each entry of \(K_{mm}\) is given by
+
+\[
+(K_{mm})_{ij} = K(\mathbf{x}_i, \mathbf{x}_j)
+\]
+
+where \(\mathbf{x}_i\) and \(\mathbf{x}_j\) are sampled points, and each entry of \(K_{nm}\) is given by
+
+\[
+(K_{nm})_{ij} = K(\mathbf{x}_i, \mathbf{x}_j)
+\]
+
+where \(\mathbf{x}_i\) is any data point and \(\mathbf{x}_j\) is a sampled point. The full kernel matrix \(K_{nn}\) is then approximated as
+
+\[
+K_{nn} \approx K_{nm} K_{mm}^{-1} K_{nm}^\top
+\]
+
+This reduces both storage and computation, enabling approximate kernel methods on much larger datasets.
+
+Random Fourier Features approximate shift-invariant kernels, such as the RBF kernel, by mapping inputs into a randomized finite-dimensional feature space where inner products approximate the kernel. By Bochner’s theorem, a shift-invariant kernel can be expressed as the Fourier transform of a probability distribution. To construct random features, we sample random frequencies \(\omega\) from the Fourier transform of the kernel and define random features
+
+\[
+z(\mathbf{x}) = \sqrt{2} \cos(\omega^\top \mathbf{x} + b)
+\]
+
+where \(b\) is sampled uniformly from \([0, 2\pi]\). Instead of computing \(K(\mathbf{x}, \mathbf{x'})\), we now compute
+
+\[
+K(\mathbf{x}, \mathbf{x'}) \approx z(\mathbf{x})^\top z(\mathbf{x'})
+\]
+
+This technique reduces the problem to a simple linear model in the new randomized feature space.
+
+Both the Nyström method and Random Fourier Features allow large-scale learning with kernel methods by approximating the kernel matrix or embedding the data into a lower-dimensional space. They make kernel-based algorithms practical for modern datasets without losing much of the expressive power of kernels.
+
+### Kernel methods in text mining and bioinformatics
+
+Kernel methods are highly flexible and can be adapted to domains where data are not naturally represented as numerical vectors. In areas such as natural language processing (NLP) and bioinformatics, kernel methods enable learning directly from structured objects like strings, sequences, or trees.
+
+In NLP, string kernels measure similarity between two text sequences without explicit feature extraction. For example, the substring kernel counts the number of common subsequences between two strings. Given two strings \(s\) and \(t\), the kernel value is higher if they share many common subsequences, weighted by their lengths and positions. This allows classifiers such as SVMs to operate directly on text, enabling tasks like text classification, document categorization, and named entity recognition without the need for explicit vectorization.
+
+In bioinformatics, kernel methods are used to compare biological sequences such as DNA, RNA, or proteins. A common example is the spectrum kernel, which represents sequences by their counts of all possible \(k\)-mers (substrings of length \(k\)). The spectrum kernel between two sequences \(s\) and \(t\) is defined as
+
+\[
+K(s, t) = \langle \Phi_k(s), \Phi_k(t) \rangle
+\]
+
+where \(\Phi_k(s)\) is a feature vector counting the occurrences of each possible \(k\)-mer in sequence \(s\). More advanced kernels, such as mismatch kernels and gapped substring kernels, allow for small mutations, making them well-suited to biological data where sequences may not match exactly.
+
+In both NLP and bioinformatics, kernel methods leverage domain-specific similarity functions to apply powerful machine learning techniques directly to structured or discrete data without requiring manual feature engineering.
+
+## Conclusion
+
+Kernel methods offer a powerful way to model nonlinear relationships by implicitly mapping data into high-dimensional spaces where linear algorithms can operate more effectively. Their main advantage lies in enabling complex decision boundaries without explicitly computing the transformation, thanks to the kernel trick. These techniques have been foundational in the development of support vector machines and other classical machine learning models, offering strong theoretical guarantees and robust performance on small to medium-sized datasets. However, they often struggle with scalability and representation learning compared to modern deep neural networks. Today, while deep learning has largely eclipsed kernel methods in popularity—especially in areas like computer vision and natural language processing—kernels remain an important conceptual and mathematical tool, and continue to find use in specialized applications and theoretical work.

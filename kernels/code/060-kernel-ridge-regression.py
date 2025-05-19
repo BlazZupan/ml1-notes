@@ -5,9 +5,9 @@ from cvxopt import matrix, solvers
 # Generate simple nonlinear data
 np.random.seed(0)
 X = np.linspace(-3, 3, 30)[:, None]
-y = np.sin(X).ravel() + 0.1 * np.random.randn(30)
+y = np.sin(X).ravel() + 0.3 * np.random.randn(30)
 
-def rbf_kernel(X1, X2, gamma=1.0):
+def rbf_kernel(X1, X2, gamma=0.01):
     # Gaussian (RBF) kernel
     X1_sq = np.sum(X1**2, axis=1)[:, np.newaxis]
     X2_sq = np.sum(X2**2, axis=1)[np.newaxis, :]
@@ -18,8 +18,8 @@ def polynomial_kernel(X1, X2, degree=3, coef0=1):
     # Polynomial kernel
     return (np.dot(X1, X2.T) + coef0) ** degree
 
-kernel, label, filename = polynomial_kernel, 'Polynomial Kernel', 'kernel-rr-poly.svg'
-# kernel, label, filename = rbf_kernel, 'Gaussian (RBF) Kernel', 'kernel-rr-rbf.svg'
+# kernel, label, filename = polynomial_kernel, 'Polynomial Kernel', 'kernel-rr-poly.svg'
+kernel, label, filename = rbf_kernel, 'Gaussian (RBF) Kernel', 'kernel-rr-rbf.svg'
 
 # Compute the Gram matrix
 K = kernel(X, X)
@@ -41,4 +41,5 @@ plt.plot(X_test, y_pred, color='blue', label=label)
 plt.legend()
 plt.xlabel('x')
 plt.ylabel('y')
+plt.show()
 plt.savefig(filename)

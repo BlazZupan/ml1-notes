@@ -60,6 +60,7 @@ plt.xlim(-6, 6)
 plt.ylim(-6, 6)
 plt.xlabel('x1')
 plt.ylabel('x2')
+plt.show()
 plt.savefig('svm-hard.svg')
 plt.close()
 

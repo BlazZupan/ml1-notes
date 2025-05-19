@@ -61,5 +61,6 @@ plt.scatter(X[y==0, 0], X[y==0, 1], color='blue', label='Class 0', edgecolor='bl
 plt.xlabel("x1")
 plt.ylabel("x2")
 # plt.legend()
+plt.show()
 plt.savefig("kernel-logreg.png")
 plt.close('all')
